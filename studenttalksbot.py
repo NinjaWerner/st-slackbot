@@ -1,8 +1,11 @@
 import os
 import time
+from datetime import datetime as dt
+from datetime import date
 import re
 from slackclient import SlackClient
 from slacker import Slacker
+from random import randint
 
 
 # instantiate Slack client
@@ -15,6 +18,9 @@ starterbot_id = None
 RTM_READ_DELAY = 1 # 1 second delay between reading from RTM
 EXAMPLE_COMMAND = ""
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
+help_text = 'You can ask if I a user is an admin with "Is _user_ an admin?" '
+
+
 
 def parse_bot_commands(slack_events):
     """
@@ -42,18 +48,61 @@ def parse_direct_mention(message_text):
     COMMANDS
 '''
 
-def is_admin_(user):
+
+def MondayTeamDay(): # Function is called monday morning at 7:00
+    text2 = 'Monday is team day and you are the chosen one! Submit a question here and I will send it to the whole group and collect their responses.'
+
+    ims = slack.im.list().body['ims']
+    user_and_im = {}
+    user_list = []
+    for im in ims: #fills dictionary with {user: direct message id}
+        if im['user'] != 'USLACKBOT':
+            user_list.append(im['user'])
+            user_and_im[im['user']] = im['id']
+
+    rand_int = randint(0,len(user_and_im)-1) #Random integer
+    chosen_user = user_list[0] #CHANGE 0 TO rand_int
+    for userr in user_list:
+        slack.im.open(user = userr) # Open DM channel if user does not have one
+    slack_client.api_call("chat.postMessage", channel = user_and_im[chosen_user],text = text2)
+
+    wait_for_response = True
+    while wait_for_response:
+        command, channel = parse_bot_commands(slack_client.rtm_read())
+        if command and channel == user_and_im[chosen_user]:
+            text3 = 'Monday is team day. A random person has been chosen to ask the core a question. The question asked was: '
+            text4 = ' Please write your answer below.'
+            k = text3 + command + text4
+            for user in user_list:
+                print(user)
+                slack_client.api_call("chat.postMessage", channel = user_and_im[user],text = k)
+
+            wait_for_response = False
+        time.sleep(RTM_READ_DELAY)
+
+
+
+
+
+
+
+
+
+def is_admin_(split_command): #See main 1
 
     users = slack.users.list()
     users = users.body['members']
 
+
     for user_data in users:
-        if user_data['name'] == user or user_data['real_name'] == user:
-            if user_data['is_admin'] == True:
-                return user + ' is an admin!'
-            else:
-                return user + ' is not an admin! :('
+        for word in split_command:
+            if user_data['name'] == word:
+                if user_data['is_admin'] == True:
+                    return word + ' is an admin!'
+                else:
+                    return word + ' is not an admin! :('
     return 'I do not recognize that user! :('
+
 
 
 def handle_command(command, channel):
@@ -61,34 +110,24 @@ def handle_command(command, channel):
         Executes bot command if the command is known
     """
     # Default response is help text for the user
-    default_response = "Not sure what you mean. Try *{}*.".format(EXAMPLE_COMMAND)
-
+    default_response = "Not sure what you mean. Write 'help' to see what I can do! :D."
+    command = command.lower()
     # Finds and executes the given command, filling in response
     response = None
+    if command == 'help':
+        response = help_text
     # This is where you start to implement more commands!
     if command.startswith('do'):
         response = "I can't do much yet"
 
-    # Is ______ an admin? #Only works with this specific question for now
-    if command.startswith('is') or command.startswith('Is') and 'admin' in command:
+    if command.startswith('is') and 'admin' in command and '?' in command:
         split_command = command.split(' ')
-        response = is_admin_(split_command[1])
+        response = is_admin_(split_command)
 
-
+    if command.startswith('test'):
+        MondayTeamDay()
     # Sends the response back to the channel
-    slack_client.api_call(
-        "chat.postMessage",
-        channel=channel,
-        text=response or default_respons)
-
-'''
-    COMMANDS
-'''
-
-#def is_admin():
-
-
-
+    slack_client.api_call("chat.postMessage",channel=channel,text=response or default_response)
 
 
 if __name__ == "__main__":
@@ -100,6 +139,9 @@ if __name__ == "__main__":
             command, channel = parse_bot_commands(slack_client.rtm_read())
             if command:
                 handle_command(command, channel)
+
+            if 70000000000 < int(dt.now().strftime('%H%M%S%f')) < 70001000000 and date.today().weekday == 0:
+                MondayTeamDay()
             time.sleep(RTM_READ_DELAY)
     else:
-        print("Connection failed. Exception traceback printed above.")
+        print("Connection failed. Exception traceback printed.")
