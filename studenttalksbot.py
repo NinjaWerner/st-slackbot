@@ -5,7 +5,7 @@ from datetime import date
 import re
 from slacker import Slacker
 from slackclient import SlackClient
-from IsAdmin import IsAdmin
+
 from random import randint
 
 
@@ -63,7 +63,6 @@ def IsAdmin(split_command): #See main 1
     users = slack.users.list() #Keeps appending unique responses
     users = users.body['members']
 
-
     for user_data in users:
         for word in split_command:
             if user_data['name'] == word:
@@ -90,7 +89,6 @@ def MondayTeamDay(): # Function is called monday morning at 7:00
     for userr in user_list:
         slack.im.open(user = userr) # Open DM channel if user does not have one#Keeps appending unique responses
     slack_client.api_call("chat.postMessage", channel = user_and_im[chosen_user],text = text2)
-    print('hi')
     wait_for_response = True
     while wait_for_response: #Wait for chosen user to respond
         command, channel = parse_bot_commands(slack_client.rtm_read())
@@ -100,13 +98,15 @@ def MondayTeamDay(): # Function is called monday morning at 7:00
             question = command #Saving this command as variable for later
             text3 = 'Monday is team day. A random person has been chosen to ask the core a question. When everyone has responded, the answers will be revealed. The question asked was:'
             text4 = ' Please write your answer below.'
-            k = text3 + '\n' + question + '\n' + text4
+            k = text3 + '\n' + '*' + question + '*' + '\n' + text4
             for im in im_list: #Post direct message with question to everyone.
                 slack_client.api_call("chat.postMessage", channel = im,text = k)
         else:
             if command:
                 handle_command(command, channel)
+
         time.sleep(RTM_READ_DELAY) #Wait delay before repeating while loop
+    print('hi')
 
     responses = []
     while len(im_list) != 1: #Keeps appending unique responses to responses until everyone has answered.
@@ -116,11 +116,13 @@ def MondayTeamDay(): # Function is called monday morning at 7:00
             im_list.remove(channel) #remove twait_for_response = Falsehe channel from list to avoid duplicated
             responses.append(command) #add the response from removed channel.
         else:
-            if command:
+            if command: # Otherwise will run with command as nonetype
                 handle_command(command,channel)
+        time.sleep(RTM_READ_DELAY) #Wait delay before repeating while loop
+
 
     answers = '\n'.join(responses)
-    full_response = 'Here are the answers to the question: \n' + answers
+    full_response = 'Here are the answers to the question: *' + question + '*' + '\n' + answers
     for user in user_list: #Sends full set of responses to everyone.
         slack_client.api_call("chat.postMessage", channel = user_and_im[user],text = full_response)
 
@@ -142,8 +144,6 @@ def IsAdmin(split_command): #See main 1
     return 'I do not recognize that user! :('
 
 
-
-
 def handle_command(command, channel):
     """
         Executes bot command if the command is known
@@ -163,8 +163,6 @@ def handle_command(command, channel):
         split_command = command.split(' ')
         response = IsAdmin(split_command)
 
-    if command.startswith('test'):
-        MondayTeamDay()
     # Sends the response back to the channel
     slack_client.api_call("chat.postMessage",channel=channel,text=response or default_response)
 
@@ -179,7 +177,7 @@ if __name__ == "__main__":
             if command:
                 handle_command(command, channel)
             # Controversial way of checking if time is between 7:00:00 and 7:00:01,5 monday morning
-            if 154500000000 < int(dt.now().strftime('%H%M%S%f')) < 154503000000 and dt.now().isoweekday() == 1:
+            if 70000000000 < int(dt.now().strftime('%H%M%S%f')) < 70003000000 and dt.now().isoweekday() == 1:
                 MondayTeamDay()
             time.sleep(RTM_READ_DELAY)
     else:
