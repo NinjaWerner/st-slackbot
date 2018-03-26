@@ -58,6 +58,20 @@ def secure_commands_from_other_channels():
         COMMANDS
 '''
 
+def IsAdmin(split_command): #See main 1
+
+    users = slack.users.list() #Keeps appending unique responses
+    users = users.body['members']
+
+
+    for user_data in users:
+        for word in split_command:
+            if user_data['name'] == word:
+                if user_data['is_admin'] == True:
+                    return word + ' is an admin!'
+                else:
+                    return word + ' is not an admin! :('
+    return 'I do not recognize that user! :('
 
 def MondayTeamDay(): # Function is called monday morning at 7:00
     text2 = 'Monday is team day and you are the chosen one! Submit a question here and I will send it to the core and collect their responses.'
